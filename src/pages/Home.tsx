@@ -68,8 +68,8 @@ export default function Home() {
 
       {/* TENTANG */}
       
-      <div className="max-w-6xl mx-auto mt-16 px-6">
-        <div className="bg-white rounded-2xl shadow-md p-6 flex gap-6 items-center animate-fadeUp">
+      <div id="profile-section" className="max-w-6xl mx-auto mt-16 px-6">
+  <div className="bg-white rounded-2xl shadow-md p-6 flex gap-6 items-center animate-fadeUp">
           <img src={tentangImg} alt="Tentang HOMIA" className="w-40" />
 
           <div>
@@ -99,7 +99,7 @@ export default function Home() {
       </div>
 
       {/* FITUR */}
-      <div className="max-w-6xl mx-auto mt-16 px-6 text-center">
+      <div id="fitur-section" className="max-w-6xl mx-auto mt-16 px-6 text-center">
         <h2 className="text-2xl font-bold">
           Fitur <span className="text-blue-600">HOMIA</span>
         </h2>

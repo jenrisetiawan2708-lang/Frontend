@@ -5,6 +5,7 @@ import { getPembayaran } from "../api/pembayaran";
 
 import heroImg from "../assets/logo-navbar.png";
 import profileImg from "../assets/profile.jpg";
+import { getAvatarSrc } from "../hooks/useAvatar";
 import teleponImg from "../assets/telepon.png";
 
 interface ModalProps { open: boolean; onClose: () => void; children: ReactNode; }
@@ -134,7 +135,7 @@ export default function RiwayatPembayaran() {
               <p className="text-sm opacity-75 mt-0.5">Hubungi Admin jika ada kendala atau pertanyaan.</p>
             </div>
           </div>
-          <button type="button" onClick={() => setModalAdmin(true)} className="bg-white text-blue-600 font-bold px-7 py-2.5 rounded-xl text-sm hover:bg-blue-50 active:scale-95 transition-all duration-200 shadow-sm shrink-0">
+          <button type="button" onClick={() => window.open("https://wa.me/6285124485778?text=Halo Admin HOMIA, saya ingin bertanya tentang riwayat pembayaran.", "_blank")} className="bg-white text-blue-600 font-bold px-7 py-2.5 rounded-xl text-sm hover:bg-blue-50 active:scale-95 transition-all duration-200 shadow-sm shrink-0">
             Hubungi Admin
           </button>
         </section>
@@ -202,7 +203,7 @@ function InformasiPenghuni({ nama, kamar }: { nama: string; kamar: string }) {
       <SectionHeader title="Informasi Penghuni" />
       <div className="p-7 flex flex-col md:flex-row md:items-center gap-6">
         <div className="w-20 h-20 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0">
-          <img src={profileImg} alt={nama} className="w-full h-full object-cover" />
+          <img src={getAvatarSrc(profileImg)} alt={nama} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Penghuni Aktif</p>

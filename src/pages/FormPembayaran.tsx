@@ -13,6 +13,7 @@ import { bayarDenganMidtrans } from "../api/midtrans";
 
 import heroImg from "../assets/logo-navbar.png";
 import profileImg from "../assets/profile.jpg";
+import { getAvatarSrc } from "../hooks/useAvatar";
 
 interface ModalProps { open: boolean; onClose: () => void; children: ReactNode; }
 
@@ -340,7 +341,7 @@ function InformasiPenghuni({ nama, kamar }: { nama: string; kamar: string }) {
       <SectionHeader title="Informasi Penghuni" />
       <div className="p-7 flex flex-col md:flex-row md:items-center gap-6">
         <div className="w-20 h-20 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 shrink-0">
-          <img src={profileImg} alt={nama} className="w-full h-full object-cover" />
+          <img src={getAvatarSrc(profileImg)} alt={nama} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Penghuni Aktif</p>

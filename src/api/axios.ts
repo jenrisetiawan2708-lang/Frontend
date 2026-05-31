@@ -20,14 +20,25 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Response interceptor: handle 401 (token expired)
+// ── Response interceptor: auto logout kalau token expired (401)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("homia_token");
-      localStorage.removeItem("homia_user");
-      window.location.href = "/login";
+      // Bersihkan semua data auth
+      [
+        "homia_token",
+        "homia_user",
+        "isLoginPenghuni",
+        "isLoginAdmin",
+        "namaPenghuni",
+      ].forEach((k) => localStorage.removeItem(k));
+
+      // Redirect ke login dengan notif session expired
+      // Hindari redirect loop kalau sudah di halaman login
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login?expired=1";
+      }
     }
     return Promise.reject(error);
   }
