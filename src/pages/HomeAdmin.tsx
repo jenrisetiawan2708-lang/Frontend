@@ -270,7 +270,7 @@ export default function HomeAdmin() {
                 {menungguValidasi > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-yellow-500 text-xl">⏳</span>
+                      <span className="text-yellow-500 text-xl"></span>
                       <p className="font-bold text-yellow-800">Ada <span className="text-yellow-600">{menungguValidasi}</span> pembayaran menunggu validasi</p>
                     </div>
                     <button onClick={() => setActiveView("pembayaran")} className="text-xs font-semibold text-yellow-600 bg-yellow-100 hover:bg-yellow-200 px-3 py-1 rounded-full transition">
@@ -280,10 +280,10 @@ export default function HomeAdmin() {
                 )}
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <QuickAction icon="👤" label="Tambah Penghuni" onClick={() => { setActiveView("penghuni"); setModalTambahPenghuni(true); }} color="blue" />
-                  <QuickAction icon="🏠" label="Kelola Kamar" onClick={() => setActiveView("kamar")} color="green" />
-                  <QuickAction icon="✅" label="Validasi Bayar" onClick={() => setActiveView("pembayaran")} color="orange" badge={menungguValidasi} />
-                  <QuickAction icon="📢" label="Kirim Pengumuman" onClick={() => { setActiveView("pengumuman"); setModalPengumuman(true); }} color="purple" />
+                  <QuickAction icon="" label="Tambah Penghuni" onClick={() => { setActiveView("penghuni"); setModalTambahPenghuni(true); }} color="blue" />
+                  <QuickAction icon="" label="Kelola Kamar" onClick={() => setActiveView("kamar")} color="green" />
+                  <QuickAction icon="" label="Validasi Bayar" onClick={() => setActiveView("pembayaran")} color="orange" badge={menungguValidasi} />
+                  <QuickAction icon="" label="Kirim Pengumuman" onClick={() => { setActiveView("pengumuman"); setModalPengumuman(true); }} color="purple" />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
@@ -451,7 +451,7 @@ export default function HomeAdmin() {
               <section className="bg-white rounded-2xl shadow-md overflow-hidden">
                 {pembayaranMenunggu.length === 0 ? (
                   <div className="px-6 py-12 text-center text-gray-400">
-                    <p className="text-3xl mb-3">✅</p>
+                    <p className="text-3xl mb-3"></p>
                     <p className="font-semibold text-gray-600">Tidak ada pembayaran yang menunggu validasi</p>
                   </div>
                 ) : (
@@ -491,7 +491,7 @@ export default function HomeAdmin() {
               </button>
             </div>
             <div className="bg-white rounded-2xl shadow-md p-10 text-center text-gray-400">
-              <p className="text-5xl mb-4">📢</p>
+              <p className="text-5xl mb-4"></p>
               <p className="font-semibold text-gray-600 text-lg">Kirim pengumuman ke semua penghuni sekaligus</p>
               <p className="text-sm mt-2">Pengumuman akan masuk ke notifikasi semua penghuni aktif</p>
               <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalPengumuman(true); }} className="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all">
@@ -610,8 +610,8 @@ export default function HomeAdmin() {
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1.5">Mode</label>
             <div className="flex gap-3">
-              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "semua" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "semua" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}>🏠 Semua Penghuni</button>
-              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "manual" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "manual" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}>👤 Manual</button>
+              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "semua" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "semua" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}> Semua Penghuni</button>
+              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "manual" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "manual" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}> Manual</button>
             </div>
           </div>
           <div>
@@ -635,7 +635,7 @@ export default function HomeAdmin() {
             </>
           )}
           {formTagihan.mode === "semua" && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-600 font-semibold">💡 Tagihan dibuat otomatis sesuai harga kamar masing-masing penghuni aktif.</div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-600 font-semibold">Tagihan dibuat otomatis sesuai harga kamar masing-masing penghuni aktif.</div>
           )}
         </div>
         <div className="flex gap-3 mt-6">
@@ -661,7 +661,7 @@ export default function HomeAdmin() {
               <a href={modalValidasi.bukti} target="_blank" rel="noreferrer" className="block w-full text-center text-sm font-bold text-blue-500 hover:underline mb-4">📎 Lihat Bukti Transfer</a>
             )}
             <div className="flex gap-3">
-              <button onClick={() => handleValidasi(modalValidasi.id, "Ditolak")} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-bold rounded-xl active:scale-95 transition-all border border-red-200">❌ Tolak</button>
+              <button onClick={() => handleValidasi(modalValidasi.id, "Ditolak")} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-bold rounded-xl active:scale-95 transition-all border border-red-200"> Tolak</button>
               <button onClick={() => handleValidasi(modalValidasi.id, "Valid")} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all">✅ Validasi</button>
             </div>
           </>

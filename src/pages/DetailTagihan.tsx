@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { logout } from "../api/auth";
+import { logout, getCurrentUser } from "../api/auth";
 import { getTagihan } from "../api/tagihan";
 import { getPembayaran } from "../api/pembayaran";
+import { cetakTagihan } from "../utils/exportPDF";
 
 import heroImg from "../assets/logo-navbar.png";
 import telepon from "../assets/telepon.png";
@@ -147,13 +148,30 @@ export default function Pembayaran() {
                     </div>
                     <img src={tagihan} alt="Tagihan" className="w-16 h-16 object-contain opacity-70 shrink-0" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/form-pembayaran")}
-                    className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3.5 rounded-xl active:scale-95 transition-all duration-200 shadow-sm"
-                  >
-                    Bayar Sekarang
-                  </button>
+                  <div className="flex gap-3 mt-5">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/form-pembayaran")}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3.5 rounded-xl active:scale-95 transition-all duration-200 shadow-sm"
+                    >
+                      Bayar Sekarang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const user = getCurrentUser();
+                        cetakTagihan(tagihanAktif, user?.nama);
+                      }}
+                      title="Cetak / Download PDF Tagihan"
+                      className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-3.5 rounded-xl active:scale-95 transition-all duration-200 text-sm"
+                    >
+                      {/* Printer icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Cetak
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>

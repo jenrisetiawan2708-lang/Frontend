@@ -15,52 +15,59 @@ import CleaningService from "./pages/CleaningService";
 import Deposit from "./pages/Deposit";
 import ForumKomunikasi from "./pages/ForumKomunikasi";
 import FormPembayaran from "./pages/FormPembayaran";
+import NotFound from "./pages/NotFound";
+
+// GUARD
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* HOME */}
+        {/* PUBLIC */}
         <Route path="/" element={<Home />} />
-
-        {/* LOGIN */}
         <Route path="/login" element={<Login />} />
-
-        {/* REGISTER */}
         <Route path="/register" element={<Register />} />
 
-        {/* DASHBOARD PENGHUNI */}
-        <Route path="/dashboard-penghuni" element={<HomePenghuni />} />
+        {/* DASHBOARD PENGHUNI — butuh login sebagai penghuni */}
+        <Route path="/dashboard-penghuni" element={
+          <ProtectedRoute requiredRole="penghuni"><HomePenghuni /></ProtectedRoute>
+        } />
+        <Route path="/pengumuman" element={
+          <ProtectedRoute requiredRole="penghuni"><Pengumuman /></ProtectedRoute>
+        } />
+        <Route path="/layanan-penghuni" element={
+          <ProtectedRoute requiredRole="penghuni"><LayananPenghuni /></ProtectedRoute>
+        } />
+        <Route path="/jatuhtempo" element={
+          <ProtectedRoute requiredRole="penghuni"><PengingatTempo /></ProtectedRoute>
+        } />
+        <Route path="/detail-tagihan" element={
+          <ProtectedRoute requiredRole="penghuni"><DetailTagihan /></ProtectedRoute>
+        } />
+        <Route path="/riwayat" element={
+          <ProtectedRoute requiredRole="penghuni"><Riwayat /></ProtectedRoute>
+        } />
+        <Route path="/cleaningservice" element={
+          <ProtectedRoute requiredRole="penghuni"><CleaningService /></ProtectedRoute>
+        } />
+        <Route path="/depositdenda" element={
+          <ProtectedRoute requiredRole="penghuni"><Deposit /></ProtectedRoute>
+        } />
+        <Route path="/forumkomunikasi" element={
+          <ProtectedRoute requiredRole="penghuni"><ForumKomunikasi /></ProtectedRoute>
+        } />
+        <Route path="/form-pembayaran" element={
+          <ProtectedRoute requiredRole="penghuni"><FormPembayaran /></ProtectedRoute>
+        } />
 
-        {/* PENGUMUMAN */}
-        <Route path="/pengumuman" element={<Pengumuman />} />
+        {/* DASHBOARD ADMIN — butuh login sebagai owner */}
+        <Route path="/homeadmin" element={
+          <ProtectedRoute requiredRole="owner"><Homeadmin /></ProtectedRoute>
+        } />
 
-        {/* LAYANAN PENGHUNI */}
-        <Route path="/layanan-penghuni" element={<LayananPenghuni />} />
-
-        {/* PENGINGAT JATUH TEMPO */}
-        <Route path="/jatuhtempo" element={<PengingatTempo />} />
-
-        {/* DETAIL TAGIHAN */}
-        <Route path="/detail-tagihan" element={<DetailTagihan />} />
-
-        {/* RIWAYAT */}
-        <Route path="/riwayat" element={<Riwayat />} />
-
-        {/* HOME ADMIN */}
-        <Route path="/homeadmin" element={<Homeadmin />} />
-
-        {/* CLEANING SERVICE */}
-        <Route path="/cleaningservice" element={<CleaningService />} />
-
-        <Route path="/depositdenda" element={<Deposit />} />
-
-        <Route path="/forumkomunikasi" element={<ForumKomunikasi />} />
-
-        <Route path="/form-pembayaran" element={<FormPembayaran />} />
-
-        {/* ROUTE TIDAK DITEMUKAN */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
