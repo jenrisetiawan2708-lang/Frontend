@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
 import { getDashboardAdmin } from "../api/dashboard";
 import { getDaftarPenghuni, tambahPenghuni, hapusPenghuni } from "../api/penghuni";
-import { getDaftarKamar, getKamarDetail } from "../api/kamar";
+import { getDaftarKamar } from "../api/kamar";
 import { getForum, kirimPesan } from "../api/forum";
 import { getTagihan, generateTagihanBulanan, buatTagihan } from "../api/tagihan";
 import { getPembayaranMenunggu, validasiPembayaran } from "../api/pembayaran";
@@ -662,7 +662,7 @@ export default function HomeAdmin() {
             )}
             <div className="flex gap-3">
               <button onClick={() => handleValidasi(modalValidasi.id, "Ditolak")} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-bold rounded-xl active:scale-95 transition-all border border-red-200"> Tolak</button>
-              <button onClick={() => handleValidasi(modalValidasi.id, "Valid")} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all">✅ Validasi</button>
+              <button onClick={() => handleValidasi(modalValidasi.id, "Valid")} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all"> Validasi</button>
             </div>
           </>
         )}

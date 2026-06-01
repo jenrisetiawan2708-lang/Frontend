@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { getCurrentUser, clearAuth, type User } from "../api/auth";
 
 export function useAuth() {
