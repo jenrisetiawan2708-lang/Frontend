@@ -56,7 +56,7 @@ export default function CleaningService() {
     setModalSuccess(true);
   };
 
-  const handleHubungiAdmin = () => {
+  {
     window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${namaPenghuni} ingin menanyakan tentang cleaning service.`, "_blank");
   };
 

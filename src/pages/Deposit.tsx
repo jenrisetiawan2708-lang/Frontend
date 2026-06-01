@@ -59,7 +59,7 @@ export default function Deposit() {
 
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
-  const handleHubungiAdmin = () => {
+  {
     window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${nama} ingin menanyakan tentang deposit/denda.`, "_blank");
   };
 

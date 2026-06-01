@@ -107,8 +107,6 @@ export default function HomePenghuni() {
   };
 
   // Avatar: foto atau inisial
-  const initials = namaPenghuni.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
-
   return (
     <div className="min-h-screen bg-[#e9eaec]">
       {/* NAVBAR */}

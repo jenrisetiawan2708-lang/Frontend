@@ -47,7 +47,7 @@ export default function PengingatTempo() {
     setModalSuccess(true);
   };
 
-  const handleHubungiAdmin = () => {
+  {
     window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${namaPenghuni} ingin menanyakan tentang pengingat jatuh tempo.`, "_blank");
   };
 
