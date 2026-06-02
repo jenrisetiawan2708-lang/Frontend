@@ -17,7 +17,6 @@ interface CleaningRequest {
 
 interface ModalProps { open: boolean; onClose: () => void; children: ReactNode; }
 
-const WA_NUMBER = "6289533847575";
 
 export default function CleaningService() {
   const navigate = useNavigate();
@@ -44,24 +43,29 @@ export default function CleaningService() {
 
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!tanggal.trim() || !jam.trim() || !catatan.trim()) {
-      setError("Lengkapi tanggal, jam, dan catatan pengajuan cleaning service.");
-      return;
-    }
-    const newRequest: CleaningRequest = { id: Date.now(), tanggal: formattedTanggal, jam: formattedJam, catatan, status: "Diproses" };
-    setRequests((current) => [newRequest, ...current]);
-    setError("");
-    setModalSuccess(true);
+const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
+
+  if (!tanggal.trim() || !jam.trim() || !catatan.trim()) {
+    setError("Lengkapi tanggal, jam, dan catatan pengajuan cleaning service.");
+    return;
+  }
+
+  const newRequest: CleaningRequest = {
+    id: Date.now(),
+    tanggal: formattedTanggal,
+    jam: formattedJam,
+    catatan,
+    status: "Diproses",
   };
 
-  {
-    window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${namaPenghuni} ingin menanyakan tentang cleaning service.`, "_blank");
-  };
+  setRequests((current) => [newRequest, ...current]);
+  setError("");
+  setModalSuccess(true);
+};
 
-  return (
-    <div className="min-h-screen bg-[#e9eaec]">
+return (
+  <div className="min-h-screen bg-[#e9eaec]">
       <Navbar onLogout={() => setModalLogout(true)} />
 
       <main className="max-w-7xl mx-auto px-6 py-7 space-y-6">

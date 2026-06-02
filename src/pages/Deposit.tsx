@@ -21,8 +21,6 @@ interface ModalProps { open: boolean; onClose: () => void; children: ReactNode; 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
-const WA_NUMBER = "6289533847575";
-
 export default function Deposit() {
   const navigate = useNavigate();
   const [modalLogout, setModalLogout] = useState(false);
@@ -56,17 +54,15 @@ export default function Deposit() {
   const totalDenda = useMemo(() => telat * dendaPerTelat, [telat]);
   const sisaDeposit = Math.max(0, depositAwal - totalDenda);
   const depositPercent = Math.round((sisaDeposit / depositAwal) * 100);
+const handleLogout = async () => {
+  await logout();
+  navigate("/login");
+};
 
-  const handleLogout = async () => { await logout(); navigate("/login"); };
-
-  {
-    window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${nama} ingin menanyakan tentang deposit/denda.`, "_blank");
-  };
-
-  if (showHistory) {
-    return (
-      <div className="min-h-screen bg-[#e9eaec]">
-        <Navbar onLogout={() => setModalLogout(true)} />
+if (showHistory) {
+  return (
+    <div className="min-h-screen bg-[#e9eaec]">
+      <Navbar onLogout={() => setModalLogout(true)} />
         <main className="max-w-7xl mx-auto px-6 py-7">
           <TransactionTable data={fineHistory} onBack={() => setShowHistory(false)} />
         </main>

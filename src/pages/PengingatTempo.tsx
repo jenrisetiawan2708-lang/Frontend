@@ -17,7 +17,6 @@ const reminderOptions: ReminderOption[] = [
   { id: "h-1", title: "H-1", subtitle: "1 hari sebelum jatuh tempo", day: 1 },
 ];
 
-const WA_NUMBER = "6289533847575";
 
 export default function PengingatTempo() {
   const navigate = useNavigate();
@@ -40,20 +39,19 @@ export default function PengingatTempo() {
 
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedReminderData) { setError("Pilih waktu pengingat terlebih dahulu."); return; }
-    setError("");
-    setModalSuccess(true);
-  };
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (!selectedReminderData) {
+    setError("Pilih waktu pengingat terlebih dahulu.");
+    return;
+  }
+  setError("");
+  setModalSuccess(true);
+};
 
-  {
-    window.open(`https://wa.me/${WA_NUMBER}?text=Halo Admin HOMIA, saya ${namaPenghuni} ingin menanyakan tentang pengingat jatuh tempo.`, "_blank");
-  };
-
-  return (
-    <div className="min-h-screen bg-[#e9eaec]">
-      <Navbar onLogout={() => setModalLogout(true)} />
+return (
+  <div className="min-h-screen bg-[#e9eaec]">
+    <Navbar onLogout={() => setModalLogout(true)} />
 
       <main className="max-w-7xl mx-auto px-6 py-7 space-y-6">
         <PageHeader eyebrow="Pengingat Pembayaran" title="Pengingat Jatuh Tempo"
