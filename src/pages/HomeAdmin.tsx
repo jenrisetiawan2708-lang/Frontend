@@ -1,695 +1,121 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
 import { getDashboardAdmin } from "../api/dashboard";
-import { getDaftarPenghuni, tambahPenghuni, hapusPenghuni } from "../api/penghuni";
+import { getDaftarPenghuni, tambahPenghuni, hapusPenghuni, updatePenghuni } from "../api/penghuni";
 import { getDaftarKamar } from "../api/kamar";
-import { getForum, kirimPesan } from "../api/forum";
-import { getTagihan, generateTagihanBulanan, buatTagihan } from "../api/tagihan";
-import { getPembayaranMenunggu, validasiPembayaran } from "../api/pembayaran";
+import { generateTagihanBulanan } from "../api/tagihan";
+import { validasiPembayaran, getPembayaranMenunggu } from "../api/pembayaran";
 import { kirimPengumuman } from "../api/pengumuman";
-import api from "../api/axios";
+import { getForum, kirimPesan } from "../api/forum";
 
 import heroImg from "../assets/logo-navbar.png";
 
 interface ModalProps { open: boolean; onClose: () => void; children: ReactNode; }
 
-const formatRupiah = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+function formatRupiah(value: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(value);
+}
 
-const getCurrentTime = () =>
-  new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false })
-    .format(new Date()).replace(".", ":");
+function getCurrentTime() {
+  return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(".", ":");
+}
 
 function Avatar({ nama }: { nama: string }) {
-  const initials = nama.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const initials = nama.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
-    <div className="w-11 h-11 rounded-2xl bg-blue-100 border border-blue-200 shrink-0 flex items-center justify-center text-sm font-bold text-blue-600">
+    <div className="w-10 h-10 rounded-full bg-blue-600 shrink-0 flex items-center justify-center text-sm font-bold text-white">
       {initials}
     </div>
   );
 }
 
-function LoadingSpinner({ text = "Memuat data..." }: { text?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-      <p className="text-sm text-gray-400 font-semibold">{text}</p>
-    </div>
-  );
-}
-
-type View = "dashboard" | "penghuni" | "tagihan" | "pembayaran" | "pengumuman" | "forum" | "kamar";
+type ActiveView = "dashboard" | "penghuni" | "tagihan" | "pembayaran" | "pengumuman" | "forum";
 
 export default function HomeAdmin() {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<View>("dashboard");
+
+  const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const [modalLogout, setModalLogout] = useState(false);
-  const [messageText, setMessageText] = useState("");
 
-  // Loading states
-  const [loadingDash, setLoadingDash] = useState(true);
-  const [loadingView, setLoadingView] = useState(false);
-
+  // Dashboard data
   const [dashData, setDashData] = useState<any>(null);
   const [penghuniList, setPenghuniList] = useState<any[]>([]);
-  const [kamarList, setKamarList] = useState<any[]>([]);
-  const [tagihanList, setTagihanList] = useState<any[]>([]);
-  const [pembayaranMenunggu, setPembayaranMenunggu] = useState<any[]>([]);
-  const [forumMessages, setForumMessages] = useState<any[]>([]);
-
-  // Modals
-  const [modalTambahPenghuni, setModalTambahPenghuni] = useState(false);
-  const [modalTagihan, setModalTagihan] = useState(false);
-  const [modalPengumuman, setModalPengumuman] = useState(false);
-  const [modalValidasi, setModalValidasi] = useState<any>(null);
-  const [modalTambahKamar, setModalTambahKamar] = useState(false);
-  const [modalEditKamar, setModalEditKamar] = useState<any>(null);
-
-  // Forms
-  const [formPenghuni, setFormPenghuni] = useState({ nama: "", email: "", username: "", password: "", id_kamar: "", tanggal_masuk: "" });
-  const [formTagihan, setFormTagihan] = useState({ bulan: new Date().toISOString().slice(0, 7), mode: "semua" as "semua" | "manual", id_sewa: "", jumlah: "" });
-  const [formPengumuman, setFormPengumuman] = useState("");
-  const [formKamar, setFormKamar] = useState({ nomor_kamar: "", harga: "", status_kamar: "kosong" });
-  const [loadingAction, setLoadingAction] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  // ── FETCH ────────────────────────────────────────────────────────
-  const fetchDashboard = () => {
-    setLoadingDash(true);
-    return getDashboardAdmin()
-      .then((r) => { if (r.success) setDashData(r.data); })
-      .finally(() => setLoadingDash(false));
-  };
-  const fetchPenghuni = () => getDaftarPenghuni().then((r) => { if (r.success) setPenghuniList(r.data); });
-  const fetchKamar = () => getDaftarKamar().then((r) => { if (r.success) setKamarList(r.data); });
-  const fetchTagihan = () => getTagihan().then((r) => { if (r.success) setTagihanList(r.data); });
-  const fetchPembayaran = () => getPembayaranMenunggu().then((r) => { if (r.success) setPembayaranMenunggu(r.data); });
-  const fetchForum = () => getForum().then((r) => { if (r.success) setForumMessages(r.data); });
-
-  useEffect(() => { fetchDashboard(); fetchKamar(); }, []);
 
   useEffect(() => {
-    setLoadingView(true);
-    const p: Promise<any>[] = [];
-    if (activeView === "penghuni") p.push(fetchPenghuni());
-    if (activeView === "tagihan") p.push(fetchTagihan(), fetchPenghuni());
-    if (activeView === "pembayaran") p.push(fetchPembayaran());
-    if (activeView === "forum") p.push(fetchForum());
-    if (activeView === "kamar") p.push(fetchKamar());
-    Promise.allSettled(p).finally(() => setLoadingView(false));
+    getDashboardAdmin().then((res) => { if (res.success) setDashData(res.data); });
+  }, []);
+
+  const refreshPenghuni = () => {
+    getDaftarPenghuni().then((res) => { if (res.success) setPenghuniList(res.data); });
+  };
+
+  useEffect(() => {
+    if (activeView === "penghuni") refreshPenghuni();
   }, [activeView]);
 
-  const handleLogout = async () => { await logout(); navigate("/login"); };
-
-  const handleSendMessage = async () => {
-    const trimmed = messageText.trim();
-    if (!trimmed) return;
-    try {
-      const res = await kirimPesan(trimmed);
-      if (res.success) setForumMessages((prev) => [...prev, { id: res.data.id, sender: "Admin", role: "owner", isi_pesan: trimmed, tanggal_fmt: getCurrentTime() }]);
-    } catch {}
-    setMessageText("");
-  };
-
-  // ── PENGHUNI ─────────────────────────────────────────────────────
-  const handleTambahPenghuni = async () => {
-    setErrorMsg(""); setSuccessMsg("");
-    if (!formPenghuni.nama || !formPenghuni.email || !formPenghuni.password || !formPenghuni.id_kamar || !formPenghuni.tanggal_masuk) {
-      setErrorMsg("Semua field wajib diisi!"); return;
-    }
-    setLoadingAction(true);
-    try {
-      await tambahPenghuni({ nama: formPenghuni.nama, email: formPenghuni.email, username: formPenghuni.username || formPenghuni.email.split("@")[0], password: formPenghuni.password, id_kamar: Number(formPenghuni.id_kamar), tanggal_masuk: formPenghuni.tanggal_masuk });
-      setSuccessMsg("Penghuni berhasil ditambahkan!");
-      setFormPenghuni({ nama: "", email: "", username: "", password: "", id_kamar: "", tanggal_masuk: "" });
-      fetchPenghuni(); fetchDashboard(); fetchKamar();
-      setTimeout(() => { setModalTambahPenghuni(false); setSuccessMsg(""); }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Gagal menambahkan penghuni.");
-    } finally { setLoadingAction(false); }
-  };
-
-  const handleHapusPenghuni = async (id: number, nama: string) => {
-    if (!confirm(`Hapus penghuni ${nama}?`)) return;
-    try { await hapusPenghuni(id); fetchPenghuni(); fetchDashboard(); fetchKamar(); }
-    catch (err: any) { alert(err.response?.data?.message || "Gagal menghapus penghuni."); }
-  };
-
-  // ── KAMAR ─────────────────────────────────────────────────────────
-  const handleTambahKamar = async () => {
-    setErrorMsg(""); setSuccessMsg("");
-    if (!formKamar.nomor_kamar || !formKamar.harga) { setErrorMsg("Nomor kamar dan harga wajib diisi!"); return; }
-    setLoadingAction(true);
-    try {
-      await api.post("/kamar", { nomor_kamar: formKamar.nomor_kamar, harga: Number(formKamar.harga), status_kamar: formKamar.status_kamar });
-      setSuccessMsg("Kamar berhasil ditambahkan!");
-      setFormKamar({ nomor_kamar: "", harga: "", status_kamar: "kosong" });
-      fetchKamar(); fetchDashboard();
-      setTimeout(() => { setModalTambahKamar(false); setSuccessMsg(""); }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Gagal menambahkan kamar.");
-    } finally { setLoadingAction(false); }
-  };
-
-  const handleEditKamar = async () => {
-    if (!modalEditKamar) return;
-    setErrorMsg(""); setSuccessMsg("");
-    setLoadingAction(true);
-    try {
-      await api.put(`/kamar/${modalEditKamar.id}`, { nomor_kamar: modalEditKamar.nomor_kamar, harga: Number(modalEditKamar.harga), status_kamar: modalEditKamar.status_kamar });
-      setSuccessMsg("Kamar berhasil diupdate!");
-      fetchKamar(); fetchDashboard();
-      setTimeout(() => { setModalEditKamar(null); setSuccessMsg(""); }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Gagal update kamar.");
-    } finally { setLoadingAction(false); }
-  };
-
-  const handleHapusKamar = async (id: number, nomor: string) => {
-    if (!confirm(`Hapus kamar ${nomor}? Pastikan tidak ada penghuni aktif.`)) return;
-    try {
-      await api.delete(`/kamar/${id}`);
-      fetchKamar(); fetchDashboard();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Gagal menghapus kamar.");
-    }
-  };
-
-  // ── TAGIHAN ───────────────────────────────────────────────────────
-  const handleGenerateTagihan = async () => {
-    setErrorMsg(""); setSuccessMsg("");
-    setLoadingAction(true);
-    try {
-      const bulanFull = formTagihan.bulan + "-01";
-      if (formTagihan.mode === "semua") {
-        const res = await generateTagihanBulanan(bulanFull);
-        setSuccessMsg(res.message || "Tagihan berhasil digenerate!");
-      } else {
-        if (!formTagihan.id_sewa || !formTagihan.jumlah) { setErrorMsg("Pilih penghuni dan isi jumlah!"); setLoadingAction(false); return; }
-        await buatTagihan({ id_sewa: Number(formTagihan.id_sewa), bulan: bulanFull, jumlah: Number(formTagihan.jumlah) });
-        setSuccessMsg("Tagihan berhasil dibuat!");
-      }
-      fetchTagihan(); fetchDashboard();
-      setTimeout(() => { setModalTagihan(false); setSuccessMsg(""); }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Gagal membuat tagihan.");
-    } finally { setLoadingAction(false); }
-  };
-
-  const handleValidasi = async (id: number, status: "Valid" | "Ditolak") => {
-    try { await validasiPembayaran(id, status); setModalValidasi(null); fetchPembayaran(); fetchDashboard(); }
-    catch (err: any) { alert(err.response?.data?.message || "Gagal validasi."); }
-  };
-
-  const handleKirimPengumuman = async () => {
-    setErrorMsg(""); setSuccessMsg("");
-    if (!formPengumuman.trim()) { setErrorMsg("Pesan tidak boleh kosong!"); return; }
-    setLoadingAction(true);
-    try {
-      const res = await kirimPengumuman(formPengumuman);
-      setSuccessMsg(res.message || "Pengumuman berhasil dikirim!");
-      setFormPengumuman("");
-      setTimeout(() => { setModalPengumuman(false); setSuccessMsg(""); }, 1500);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Gagal kirim pengumuman.");
-    } finally { setLoadingAction(false); }
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   const totalKamar = dashData?.kamar?.total ?? 0;
   const kamarTerisi = dashData?.kamar?.terisi ?? 0;
   const kamarKosong = dashData?.kamar?.kosong ?? 0;
   const totalPendapatan = dashData?.pendapatan_bulan_ini ?? 0;
-  const menungguValidasi = dashData?.menunggu_validasi ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#e9eaec]">
+    <div className="min-h-screen bg-gray-100">
       {/* NAVBAR */}
-      <nav className="bg-gradient-to-r from-blue-600 to-blue-300 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+      <nav style={{ background: "linear-gradient(to right, #1d4ed8, #60a5fa)" }} className="shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <button type="button" onClick={() => setActiveView("dashboard")} className="flex items-center gap-3">
-            <img src={heroImg} alt="HOMIA" className="w-14 object-contain" />
-            <h1 className="text-3xl font-extrabold text-white tracking-wide">HOMIA</h1>
+            <img src={heroImg} alt="HOMIA" className="w-10 object-contain" />
+            <span className="text-2xl font-extrabold text-white tracking-wide">HOMIA</span>
           </button>
-          <div className="flex gap-5 text-white text-base items-center flex-wrap justify-end">
-            <NavBtn active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")}>Dashboard</NavBtn>
-            <NavBtn active={activeView === "penghuni"} onClick={() => setActiveView("penghuni")}>Penghuni</NavBtn>
-            <NavBtn active={activeView === "kamar"} onClick={() => setActiveView("kamar")}>Kamar</NavBtn>
-            <NavBtn active={activeView === "tagihan"} onClick={() => setActiveView("tagihan")}>Tagihan</NavBtn>
-            <NavBtn active={activeView === "pembayaran"} onClick={() => setActiveView("pembayaran")}>
-              Pembayaran {menungguValidasi > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{menungguValidasi}</span>}
-            </NavBtn>
-            <NavBtn active={activeView === "pengumuman"} onClick={() => setActiveView("pengumuman")}>Pengumuman</NavBtn>
-            <NavBtn active={activeView === "forum"} onClick={() => setActiveView("forum")}>Forum</NavBtn>
+
+          <div className="flex gap-6 text-white text-base items-center">
+            {(["dashboard","penghuni","tagihan","pembayaran","pengumuman","forum"] as ActiveView[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setActiveView(v)}
+                className={`capitalize transition hover:underline ${activeView === v ? "underline font-bold" : ""}`}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
             <button type="button" onClick={() => setModalLogout(true)} className="hover:underline transition">Logout</button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-7 space-y-6">
-
-        {/* ── DASHBOARD ── */}
+      <main className="max-w-7xl mx-auto px-6 py-6">
         {activeView === "dashboard" && (
-          <>
-            <section>
-              <p className="text-lg text-gray-500">Selamat datang,</p>
-              <h1 className="text-4xl font-extrabold text-gray-900 mt-0.5">Admin HOMIA</h1>
-              <p className="text-base text-gray-400 mt-1">Pantau dan kelola semua data kost dari sini.</p>
-            </section>
-
-            {loadingDash ? <LoadingSpinner text="Memuat data dashboard..." /> : (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <MetricCard label="Total Kamar" value={String(totalKamar)} desc="Semua kamar" tone="blue" />
-                  <MetricCard label="Kamar Terisi" value={String(kamarTerisi)} desc="Penghuni aktif" tone="green" />
-                  <MetricCard label="Kamar Kosong" value={String(kamarKosong)} desc="Siap ditempati" tone="orange" />
-                  <MetricCard label="Pendapatan" value={formatRupiah(totalPendapatan)} desc="Bulan ini" tone="blue" />
-                </div>
-
-                {menungguValidasi > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-yellow-500 text-xl"></span>
-                      <p className="font-bold text-yellow-800">Ada <span className="text-yellow-600">{menungguValidasi}</span> pembayaran menunggu validasi</p>
-                    </div>
-                    <button onClick={() => setActiveView("pembayaran")} className="text-xs font-semibold text-yellow-600 bg-yellow-100 hover:bg-yellow-200 px-3 py-1 rounded-full transition">
-                      Validasi Sekarang →
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <QuickAction icon="" label="Tambah Penghuni" onClick={() => { setActiveView("penghuni"); setModalTambahPenghuni(true); }} color="blue" />
-                  <QuickAction icon="" label="Kelola Kamar" onClick={() => setActiveView("kamar")} color="green" />
-                  <QuickAction icon="" label="Validasi Bayar" onClick={() => setActiveView("pembayaran")} color="orange" badge={menungguValidasi} />
-                  <QuickAction icon="" label="Kirim Pengumuman" onClick={() => { setActiveView("pengumuman"); setModalPengumuman(true); }} color="purple" />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-                  <PenghuniPreview onViewAll={() => setActiveView("penghuni")} />
-                  <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-                    <SectionHeader title="Pendapatan Bulan Ini" />
-                    <div className="p-7">
-                      <p className="text-4xl font-extrabold text-gray-900">{formatRupiah(totalPendapatan)}</p>
-                      <p className="text-sm text-gray-400 mt-2">Dari {kamarTerisi} kamar aktif</p>
-                      <button onClick={() => setActiveView("tagihan")} className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl active:scale-95 transition-all">
-                        Lihat Semua Tagihan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+          <DashboardView
+            totalKamar={totalKamar}
+            kamarTerisi={kamarTerisi}
+            kamarKosong={kamarKosong}
+            totalPendapatan={totalPendapatan}
+            onNavigate={setActiveView}
+          />
         )}
-
-        {/* ── PENGHUNI ── */}
         {activeView === "penghuni" && (
-          <>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <p className="text-lg text-gray-500">Kelola</p>
-                <h1 className="text-4xl font-extrabold text-gray-900">Data Penghuni</h1>
-              </div>
-              <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalTambahPenghuni(true); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all">
-                + Tambah Penghuni
-              </button>
-            </div>
-            {loadingView ? <LoadingSpinner text="Memuat data penghuni..." /> : (
-              <section className="bg-white rounded-2xl shadow-md overflow-hidden">
-                <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
-                  {["Nama", "Kamar", "Email", "Status", "Aksi"].map((h, i) => (
-                    <div key={h} className={`text-xs font-bold text-gray-400 uppercase tracking-widest ${i === 0 ? "col-span-3" : i === 1 ? "col-span-2" : i === 2 ? "col-span-3" : i === 3 ? "col-span-2" : "col-span-2 text-right"}`}>{h}</div>
-                  ))}
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {penghuniList.length === 0 && <div className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada data penghuni</div>}
-                  {penghuniList.map((item: any) => (
-                    <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-blue-50/30 transition">
-                      <div className="col-span-3 flex items-center gap-3"><Avatar nama={item.nama} /><p className="text-sm font-bold text-gray-900 truncate">{item.nama}</p></div>
-                      <div className="col-span-2"><p className="text-base font-bold text-gray-900">{item.kamar?.nomor_kamar || "-"}</p></div>
-                      <div className="col-span-3"><p className="text-sm text-gray-500 truncate">{item.email}</p></div>
-                      <div className="col-span-2">
-                        <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold ${item.kamar ? "bg-green-50 text-green-600" : "bg-gray-50 text-gray-400"}`}>
-                          {item.kamar ? "Aktif" : "No Kamar"}
-                        </span>
-                      </div>
-                      <div className="col-span-2 flex justify-end">
-                        <button onClick={() => handleHapusPenghuni(item.id, item.nama)} className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition">Hapus</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
+          <PenghuniView data={penghuniList} onRefresh={refreshPenghuni} />
         )}
-
-        {/* ── KAMAR ── */}
-        {activeView === "kamar" && (
-          <>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <p className="text-lg text-gray-500">Kelola</p>
-                <h1 className="text-4xl font-extrabold text-gray-900">Data Kamar</h1>
-              </div>
-              <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setFormKamar({ nomor_kamar: "", harga: "", status_kamar: "kosong" }); setModalTambahKamar(true); }} className="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all">
-                + Tambah Kamar
-              </button>
-            </div>
-            {loadingView ? <LoadingSpinner text="Memuat data kamar..." /> : (
-              <section className="bg-white rounded-2xl shadow-md overflow-hidden">
-                <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
-                  {["No Kamar", "Harga/Bulan", "Status", "Fasilitas", "Aksi"].map((h, i) => (
-                    <div key={h} className={`text-xs font-bold text-gray-400 uppercase tracking-widest ${i === 0 ? "col-span-2" : i === 1 ? "col-span-3" : i === 2 ? "col-span-2" : i === 3 ? "col-span-3" : "col-span-2 text-right"}`}>{h}</div>
-                  ))}
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {kamarList.length === 0 && <div className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada data kamar</div>}
-                  {kamarList.map((item: any) => (
-                    <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-blue-50/30 transition">
-                      <div className="col-span-2">
-                        <p className="text-lg font-extrabold text-gray-900">{item.nomor_kamar}</p>
-                      </div>
-                      <div className="col-span-3">
-                        <p className="text-sm font-bold text-gray-900">{item.harga_format}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold ${item.status_kamar === "terisi" ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
-                          {item.status_kamar === "terisi" ? "Terisi" : "Kosong"}
-                        </span>
-                      </div>
-                      <div className="col-span-3">
-                        <p className="text-xs text-gray-400">{item.fasilitas?.map((f: any) => f.nama).join(", ") || "-"}</p>
-                      </div>
-                      <div className="col-span-2 flex justify-end gap-3">
-                        <button
-                          onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalEditKamar({ id: item.id, nomor_kamar: item.nomor_kamar, harga: String(item.harga), status_kamar: item.status_kamar }); }}
-                          className="text-xs font-bold text-blue-500 hover:text-blue-700 hover:underline transition"
-                        >Edit</button>
-                        <button
-                          onClick={() => handleHapusKamar(item.id, item.nomor_kamar)}
-                          className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition"
-                        >Hapus</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
-
-        {/* ── TAGIHAN ── */}
-        {activeView === "tagihan" && (
-          <>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <p className="text-lg text-gray-500">Kelola</p>
-                <h1 className="text-4xl font-extrabold text-gray-900">Tagihan</h1>
-              </div>
-              <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalTagihan(true); }} className="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all">
-                + Buat Tagihan
-              </button>
-            </div>
-            {loadingView ? <LoadingSpinner text="Memuat data tagihan..." /> : (
-              <section className="bg-white rounded-2xl shadow-md overflow-hidden">
-                <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
-                  {["Penghuni", "Kamar", "Bulan", "Total", "Status"].map((h, i) => (
-                    <div key={h} className={`text-xs font-bold text-gray-400 uppercase tracking-widest ${i === 0 ? "col-span-3" : i === 1 ? "col-span-2" : i === 2 ? "col-span-3" : i === 3 ? "col-span-2" : "col-span-2 text-right"}`}>{h}</div>
-                  ))}
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {tagihanList.length === 0 && <div className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada tagihan</div>}
-                  {tagihanList.map((item: any) => (
-                    <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-blue-50/30 transition">
-                      <div className="col-span-3"><p className="text-sm font-bold text-gray-900 truncate">{item.penghuni?.nama || "-"}</p></div>
-                      <div className="col-span-2"><p className="text-sm font-bold">{item.kamar?.nomor || "-"}</p></div>
-                      <div className="col-span-3"><p className="text-sm text-gray-600">{item.bulan_label || item.bulan}</p></div>
-                      <div className="col-span-2"><p className="text-sm font-bold">{item.total_format}</p></div>
-                      <div className="col-span-2 flex justify-end">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${item.status_tagihan === "Lunas" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>{item.status_tagihan}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
-
-        {/* ── PEMBAYARAN ── */}
-        {activeView === "pembayaran" && (
-          <>
-            <div>
-              <p className="text-lg text-gray-500">Validasi</p>
-              <h1 className="text-4xl font-extrabold text-gray-900">Pembayaran Masuk</h1>
-              <p className="text-base text-gray-400 mt-1">Verifikasi bukti pembayaran dari penghuni.</p>
-            </div>
-            {loadingView ? <LoadingSpinner text="Memuat data pembayaran..." /> : (
-              <section className="bg-white rounded-2xl shadow-md overflow-hidden">
-                {pembayaranMenunggu.length === 0 ? (
-                  <div className="px-6 py-12 text-center text-gray-400">
-                    <p className="text-3xl mb-3"></p>
-                    <p className="font-semibold text-gray-600">Tidak ada pembayaran yang menunggu validasi</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {pembayaranMenunggu.map((item: any) => (
-                      <div key={item.id} className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-blue-50/20 transition">
-                        <div className="flex items-center gap-4">
-                          <Avatar nama={item.penghuni?.nama || "?"} />
-                          <div>
-                            <p className="font-bold text-gray-900">{item.penghuni?.nama || "-"}</p>
-                            <p className="text-sm text-gray-400">Kamar {item.kamar?.nomor || "-"} · {item.tanggal_pembayaran}</p>
-                            <p className="text-sm font-bold text-blue-600 mt-0.5">{item.jumlah_format}</p>
-                          </div>
-                        </div>
-                        <button onClick={() => setModalValidasi(item)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl active:scale-95 transition-all">
-                          Validasi
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-          </>
-        )}
-
-        {/* ── PENGUMUMAN ── */}
-        {activeView === "pengumuman" && (
-          <>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <p className="text-lg text-gray-500">Broadcast</p>
-                <h1 className="text-4xl font-extrabold text-gray-900">Pengumuman</h1>
-              </div>
-              <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalPengumuman(true); }} className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all">
-                + Kirim Pengumuman
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl shadow-md p-10 text-center text-gray-400">
-              <p className="text-5xl mb-4"></p>
-              <p className="font-semibold text-gray-600 text-lg">Kirim pengumuman ke semua penghuni sekaligus</p>
-              <p className="text-sm mt-2">Pengumuman akan masuk ke notifikasi semua penghuni aktif</p>
-              <button onClick={() => { setErrorMsg(""); setSuccessMsg(""); setModalPengumuman(true); }} className="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-3 rounded-xl active:scale-95 transition-all">
-                Tulis Pengumuman
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ── FORUM ── */}
-        {activeView === "forum" && (
-          <>
-            <div>
-              <p className="text-lg text-gray-500">Komunikasi</p>
-              <h1 className="text-4xl font-extrabold text-gray-900">Forum Penghuni</h1>
-            </div>
-            {loadingView ? <LoadingSpinner text="Memuat pesan forum..." /> : (
-              <ForumAdmin messages={forumMessages} messageText={messageText} onChangeMessage={setMessageText} onSend={handleSendMessage}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSendMessage(); } }} />
-            )}
-          </>
-        )}
-
+        {activeView === "tagihan" && <TagihanView />}
+        {activeView === "pembayaran" && <PembayaranView />}
+        {activeView === "pengumuman" && <PengumumanView />}
+        {activeView === "forum" && <ForumView />}
       </main>
 
-      {/* ── MODAL TAMBAH PENGHUNI ── */}
-      <Modal open={modalTambahPenghuni} onClose={() => setModalTambahPenghuni(false)}>
-        <h2 className="text-xl font-extrabold text-gray-900 mb-5">Tambah Penghuni Baru</h2>
-        <MsgBanner success={successMsg} error={errorMsg} />
-        <div className="space-y-3">
-          <FormField label="Nama Lengkap" value={formPenghuni.nama} onChange={(v) => setFormPenghuni({ ...formPenghuni, nama: v })} placeholder="Nama penghuni" />
-          <FormField label="Email" value={formPenghuni.email} onChange={(v) => setFormPenghuni({ ...formPenghuni, email: v })} placeholder="email@contoh.com" />
-          <FormField label="Username (opsional)" value={formPenghuni.username} onChange={(v) => setFormPenghuni({ ...formPenghuni, username: v })} placeholder="Kosongkan = otomatis" />
-          <FormField label="Password" value={formPenghuni.password} onChange={(v) => setFormPenghuni({ ...formPenghuni, password: v })} placeholder="Min 8 karakter" type="password" />
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Pilih Kamar</label>
-            <select value={formPenghuni.id_kamar} onChange={(e) => setFormPenghuni({ ...formPenghuni, id_kamar: e.target.value })}
-              className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-              <option value="">-- Pilih Kamar Kosong --</option>
-              {kamarList.filter((k: any) => k.status_kamar === "kosong").map((k: any) => (
-                <option key={k.id} value={k.id}>Kamar {k.nomor_kamar} — {k.harga_format}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Tanggal Masuk</label>
-            <input type="text" value={formPenghuni.tanggal_masuk} onChange={(e) => setFormPenghuni({ ...formPenghuni, tanggal_masuk: e.target.value })}
-              placeholder="2026-05-27"
-              className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
-            <p className="text-xs text-gray-400 mt-1">Format: YYYY-MM-DD · contoh: 2026-05-27</p>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={() => setModalTambahPenghuni(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleTambahPenghuni} disabled={loadingAction} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            {loadingAction ? <span className="flex items-center justify-center gap-2"><Spinner />Menyimpan...</span> : "Tambah Penghuni"}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── MODAL TAMBAH KAMAR ── */}
-      <Modal open={modalTambahKamar} onClose={() => setModalTambahKamar(false)}>
-        <h2 className="text-xl font-extrabold text-gray-900 mb-5">Tambah Kamar Baru</h2>
-        <MsgBanner success={successMsg} error={errorMsg} />
-        <div className="space-y-3">
-          <FormField label="Nomor Kamar" value={formKamar.nomor_kamar} onChange={(v) => setFormKamar({ ...formKamar, nomor_kamar: v })} placeholder="Contoh: P16" />
-          <FormField label="Harga per Bulan (Rp)" value={formKamar.harga} onChange={(v) => setFormKamar({ ...formKamar, harga: v })} placeholder="Contoh: 1500000" type="number" />
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Status Kamar</label>
-            <select value={formKamar.status_kamar} onChange={(e) => setFormKamar({ ...formKamar, status_kamar: e.target.value })}
-              className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-              <option value="kosong">Kosong</option>
-              <option value="terisi">Terisi</option>
-            </select>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={() => setModalTambahKamar(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleTambahKamar} disabled={loadingAction} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            {loadingAction ? <span className="flex items-center justify-center gap-2"><Spinner />Menyimpan...</span> : "Tambah Kamar"}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── MODAL EDIT KAMAR ── */}
-      <Modal open={!!modalEditKamar} onClose={() => setModalEditKamar(null)}>
-        <h2 className="text-xl font-extrabold text-gray-900 mb-5">Edit Kamar {modalEditKamar?.nomor_kamar}</h2>
-        <MsgBanner success={successMsg} error={errorMsg} />
-        {modalEditKamar && (
-          <div className="space-y-3">
-            <FormField label="Nomor Kamar" value={modalEditKamar.nomor_kamar} onChange={(v) => setModalEditKamar({ ...modalEditKamar, nomor_kamar: v })} placeholder="Nomor kamar" />
-            <FormField label="Harga per Bulan (Rp)" value={modalEditKamar.harga} onChange={(v) => setModalEditKamar({ ...modalEditKamar, harga: v })} placeholder="Harga" type="number" />
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">Status Kamar</label>
-              <select value={modalEditKamar.status_kamar} onChange={(e) => setModalEditKamar({ ...modalEditKamar, status_kamar: e.target.value })}
-                className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="kosong">Kosong</option>
-                <option value="terisi">Terisi</option>
-              </select>
-            </div>
-          </div>
-        )}
-        <div className="flex gap-3 mt-6">
-          <button onClick={() => setModalEditKamar(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleEditKamar} disabled={loadingAction} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            {loadingAction ? <span className="flex items-center justify-center gap-2"><Spinner />Menyimpan...</span> : "Simpan Perubahan"}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── MODAL BUAT TAGIHAN ── */}
-      <Modal open={modalTagihan} onClose={() => setModalTagihan(false)}>
-        <h2 className="text-xl font-extrabold text-gray-900 mb-5">Buat Tagihan</h2>
-        <MsgBanner success={successMsg} error={errorMsg} />
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Mode</label>
-            <div className="flex gap-3">
-              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "semua" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "semua" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}> Semua Penghuni</button>
-              <button onClick={() => setFormTagihan({ ...formTagihan, mode: "manual" })} className={`flex-1 py-2.5 text-sm font-bold rounded-xl border transition ${formTagihan.mode === "manual" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200"}`}> Manual</button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Bulan</label>
-            <input type="month" value={formTagihan.bulan} onChange={(e) => setFormTagihan({ ...formTagihan, bulan: e.target.value })}
-              className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
-          {formTagihan.mode === "manual" && (
-            <>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1.5">Penghuni</label>
-                <select value={formTagihan.id_sewa} onChange={(e) => setFormTagihan({ ...formTagihan, id_sewa: e.target.value })}
-                  className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-                  <option value="">-- Pilih Penghuni --</option>
-                  {penghuniList.filter((p: any) => p.kamar).map((p: any) => (
-                    <option key={p.id} value={p.kamar?.id_sewa}>{p.nama} — Kamar {p.kamar?.nomor_kamar}</option>
-                  ))}
-                </select>
-              </div>
-              <FormField label="Jumlah (Rp)" value={formTagihan.jumlah} onChange={(v) => setFormTagihan({ ...formTagihan, jumlah: v })} placeholder="1500000" type="number" />
-            </>
-          )}
-          {formTagihan.mode === "semua" && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-600 font-semibold">Tagihan dibuat otomatis sesuai harga kamar masing-masing penghuni aktif.</div>
-          )}
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={() => setModalTagihan(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleGenerateTagihan} disabled={loadingAction} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            {loadingAction ? <span className="flex items-center justify-center gap-2"><Spinner />Memproses...</span> : "Buat Tagihan"}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── MODAL VALIDASI ── */}
-      <Modal open={!!modalValidasi} onClose={() => setModalValidasi(null)}>
-        {modalValidasi && (
-          <>
-            <h2 className="text-xl font-extrabold text-gray-900 mb-5">Validasi Pembayaran</h2>
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2 mb-5">
-              <InfoRow label="Penghuni" value={modalValidasi.penghuni?.nama || "-"} />
-              <InfoRow label="Kamar" value={`Kamar ${modalValidasi.kamar?.nomor || "-"}`} />
-              <InfoRow label="Jumlah" value={modalValidasi.jumlah_format} />
-              <InfoRow label="Tanggal" value={modalValidasi.tanggal_pembayaran} />
-            </div>
-            {modalValidasi.bukti && !modalValidasi.bukti.startsWith("midtrans:") && (
-              <a href={modalValidasi.bukti} target="_blank" rel="noreferrer" className="block w-full text-center text-sm font-bold text-blue-500 hover:underline mb-4">📎 Lihat Bukti Transfer</a>
-            )}
-            <div className="flex gap-3">
-              <button onClick={() => handleValidasi(modalValidasi.id, "Ditolak")} className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-bold rounded-xl active:scale-95 transition-all border border-red-200"> Tolak</button>
-              <button onClick={() => handleValidasi(modalValidasi.id, "Valid")} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl active:scale-95 transition-all"> Validasi</button>
-            </div>
-          </>
-        )}
-      </Modal>
-
-      {/* ── MODAL PENGUMUMAN ── */}
-      <Modal open={modalPengumuman} onClose={() => setModalPengumuman(false)}>
-        <h2 className="text-xl font-extrabold text-gray-900 mb-5">Kirim Pengumuman</h2>
-        <MsgBanner success={successMsg} error={errorMsg} />
-        <p className="text-sm text-gray-500 mb-3">Pesan akan dikirim ke semua penghuni aktif.</p>
-        <textarea value={formPengumuman} onChange={(e) => setFormPengumuman(e.target.value)} placeholder="Tulis isi pengumuman..." rows={4}
-          className="w-full rounded-xl border border-blue-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
-        <div className="flex gap-3 mt-4">
-          <button onClick={() => setModalPengumuman(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleKirimPengumuman} disabled={loadingAction} className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            {loadingAction ? <span className="flex items-center justify-center gap-2"><Spinner />Mengirim...</span> : "Kirim ke Semua"}
-          </button>
-        </div>
-      </Modal>
-
-      {/* ── MODAL LOGOUT ── */}
+      {/* MODAL LOGOUT */}
       <Modal open={modalLogout} onClose={() => setModalLogout(false)}>
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Logout?</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Logout?</h2>
         <p className="text-gray-500 text-sm mb-6">Apakah kamu yakin ingin keluar dari dashboard admin?</p>
         <div className="flex gap-3">
-          <button onClick={() => setModalLogout(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all">Batal</button>
-          <button onClick={handleLogout} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl active:scale-95 transition-all">Ya, Logout</button>
+          <button type="button" onClick={() => setModalLogout(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition">Batal</button>
+          <button type="button" onClick={handleLogout} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition">Ya, Logout</button>
         </div>
       </Modal>
 
@@ -698,143 +124,666 @@ export default function HomeAdmin() {
   );
 }
 
-// ── COMPONENTS ───────────────────────────────────────────────────────────────
+// ─── DASHBOARD VIEW ───────────────────────────────────────────────────────────
+function DashboardView({ totalKamar, kamarTerisi, kamarKosong, totalPendapatan, onNavigate }: {
+  totalKamar: number; kamarTerisi: number; kamarKosong: number; totalPendapatan: number;
+  onNavigate: (v: ActiveView) => void;
+}) {
+  const [penghuni, setPenghuni] = useState<any[]>([]);
+  useEffect(() => {
+    getDaftarPenghuni().then((res) => { if (res.success) setPenghuni(res.data.slice(0, 5)); });
+  }, []);
 
-function NavBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className={`transition hover:underline flex items-center gap-1 ${active ? "underline font-bold" : ""}`}>{children}</button>;
-}
-
-function MetricCard({ label, value, desc, tone }: { label: string; value: string; desc: string; tone: "blue" | "green" | "orange" }) {
-  const t = { blue: { card: "bg-blue-50 border-blue-100", label: "text-blue-500", val: "text-blue-700" }, green: { card: "bg-green-50 border-green-100", label: "text-green-600", val: "text-green-700" }, orange: { card: "bg-orange-50 border-orange-100", label: "text-orange-500", val: "text-orange-600" } }[tone];
   return (
-    <div className={`rounded-2xl border p-5 hover:-translate-y-1 hover:shadow-lg transition-all ${t.card}`}>
-      <p className={`text-xs font-bold uppercase tracking-widest ${t.label}`}>{label}</p>
-      <p className={`text-2xl font-extrabold mt-2 ${t.val}`}>{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{desc}</p>
+    <div className="space-y-5">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="TOTAL KAMAR" value={String(totalKamar)} sub="Semua kamar" color="blue" />
+        <StatCard label="KAMAR TERISI" value={String(kamarTerisi)} sub="Penghuni aktif" color="green" />
+        <StatCard label="KAMAR KOSONG" value={String(kamarKosong)} sub="Siap ditempati" color="red" />
+        <StatCard label="PENDAPATAN" value={formatRupiah(totalPendapatan)} sub="Bulan ini" color="blue" />
+      </div>
+
+      {/* Quick Action Buttons */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <QuickBtn label="Tambah Penghuni" color="blue-outline" onClick={() => onNavigate("penghuni")} />
+        <QuickBtn label="Buat Tagihan" color="green-outline" onClick={() => onNavigate("tagihan")} />
+        <QuickBtn label="Validasi Bayar" color="red-outline" onClick={() => onNavigate("pembayaran")} />
+        <QuickBtn label="Kirim Pengumuman" color="blue-outline" onClick={() => onNavigate("pengumuman")} />
+      </div>
+
+      {/* Bottom section */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+        {/* Penghuni Aktif */}
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+                <p className="font-extrabold text-gray-900 text-lg">PENGHUNI AKTIF</p>
+              </div>
+              <p className="text-sm text-gray-400 mt-0.5">5 terbaru</p>
+            </div>
+            <button type="button" onClick={() => onNavigate("penghuni")} className="text-sm text-blue-600 font-semibold hover:underline">Lihat Semua</button>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {penghuni.length === 0 && <p className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada penghuni</p>}
+            {penghuni.map((p: any) => (
+              <div key={p.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+                <div className="flex items-center gap-3">
+                  <Avatar nama={p.nama} />
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">{p.nama}</p>
+                    <p className="text-xs text-gray-400">{p.email}</p>
+                  </div>
+                </div>
+                <p className="font-bold text-green-600 text-sm">Kamar {p.kamar?.nomor_kamar || "-"}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Pendapatan */}
+        <div className="bg-white rounded-2xl shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+            <p className="font-bold text-gray-700 text-sm uppercase tracking-wide">Pendapatan Bulan Ini</p>
+          </div>
+          <div className="px-6 py-6">
+            <p className="text-4xl font-extrabold text-gray-900">{formatRupiah(totalPendapatan)}</p>
+            <p className="text-sm text-gray-400 mt-2">Dari {String(totalPendapatan > 0 ? "kamar aktif" : "0 kamar aktif")}</p>
+            <button
+              type="button"
+              onClick={() => onNavigate("tagihan")}
+              className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition text-sm"
+            >
+              Lihat Semua Tagihan
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function QuickAction({ icon, label, onClick, color, badge }: { icon: string; label: string; onClick: () => void; color: string; badge?: number }) {
-  const colors: Record<string, string> = { blue: "bg-blue-50 hover:bg-blue-100 border-blue-100 text-blue-700", green: "bg-green-50 hover:bg-green-100 border-green-100 text-green-700", orange: "bg-orange-50 hover:bg-orange-100 border-orange-100 text-orange-700", purple: "bg-purple-50 hover:bg-purple-100 border-purple-100 text-purple-700" };
+function StatCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: "blue" | "green" | "red" }) {
+  const cls = {
+    blue: "border-blue-200 bg-blue-50 text-blue-700",
+    green: "border-green-200 bg-green-50 text-green-700",
+    red: "border-red-200 bg-red-50 text-red-600",
+  }[color];
+  const labelCls = { blue: "text-blue-500", green: "text-green-600", red: "text-red-500" }[color];
   return (
-    <button onClick={onClick} className={`rounded-2xl border p-5 text-left transition-all hover:-translate-y-1 hover:shadow-md active:scale-95 relative ${colors[color]}`}>
-      <span className="text-2xl">{icon}</span>
-      <p className="text-sm font-bold mt-2">{label}</p>
-      {badge && badge > 0 ? <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{badge}</span> : null}
+    <div className={`rounded-2xl border p-5 ${cls}`}>
+      <p className={`text-xs font-bold uppercase tracking-widest ${labelCls}`}>{label}</p>
+      <p className="text-3xl font-extrabold mt-2">{value}</p>
+      <p className="text-xs text-gray-400 mt-1">{sub}</p>
+    </div>
+  );
+}
+
+function QuickBtn({ label, color, onClick }: { label: string; color: string; onClick: () => void }) {
+  const cls = color === "green-outline"
+    ? "border-green-400 text-green-600 hover:bg-green-50"
+    : color === "red-outline"
+    ? "border-red-400 text-red-500 hover:bg-red-50"
+    : "border-blue-400 text-blue-600 hover:bg-blue-50";
+  return (
+    <button type="button" onClick={onClick} className={`rounded-xl border-2 bg-white px-4 py-3 text-sm font-bold transition ${cls}`}>
+      {label}
     </button>
   );
 }
 
-function PenghuniPreview({ onViewAll }: { onViewAll: () => void }) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    getDaftarPenghuni().then((r) => { if (r.success) setData(r.data.slice(0, 5)); }).finally(() => setLoading(false));
-  }, []);
+// ─── PENGHUNI VIEW ────────────────────────────────────────────────────────────
+function PenghuniView({ data, onRefresh }: { data: any[]; onRefresh: () => void }) {
+  const [modalTambah, setModalTambah] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [hapusTarget, setHapusTarget] = useState<any | null>(null);
+  const [loadingHapus, setLoadingHapus] = useState(false);
+
+  const handleHapus = async () => {
+    if (!hapusTarget) return;
+    setLoadingHapus(true);
+    try { await hapusPenghuni(hapusTarget.id); onRefresh(); } catch {}
+    setLoadingHapus(false);
+    setHapusTarget(null);
+  };
+
   return (
-    <section className="bg-white rounded-2xl shadow-md overflow-hidden">
-      <div className="px-7 py-5 flex items-center justify-between border-b border-gray-100">
-        <div><h2 className="text-xl font-extrabold text-gray-900">Penghuni Aktif</h2><p className="text-sm text-gray-400 mt-0.5">5 terbaru</p></div>
-        <button onClick={onViewAll} className="text-sm font-bold text-blue-600 hover:underline">Lihat Semua →</button>
+    <div>
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-sm text-gray-500">Kelola</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Data Penghuni</h1>
+        </div>
+        <button type="button" onClick={() => setModalTambah(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm">
+          + Tambah Penghuni
+        </button>
       </div>
-      {loading ? <LoadingSpinner text="Memuat..." /> : (
+
+      <div className="bg-white rounded-2xl shadow overflow-hidden">
+        <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Nama</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Kamar</div>
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Email</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Aksi</div>
+        </div>
         <div className="divide-y divide-gray-100">
-          {data.length === 0 && <div className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada penghuni</div>}
+          {data.length === 0 && <p className="px-6 py-10 text-center text-gray-400 text-sm">Belum ada data penghuni</p>}
           {data.map((item: any) => (
-            <div key={item.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-blue-50/30 transition">
-              <Avatar nama={item.nama} />
-              <div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900 truncate">{item.nama}</p><p className="text-xs text-gray-400">{item.email}</p></div>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full ${item.kamar ? "bg-green-50 text-green-600" : "bg-gray-50 text-gray-400"}`}>
-                {item.kamar ? `Kamar ${item.kamar.nomor_kamar}` : "No Kamar"}
-              </span>
+            <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-blue-50/30 transition">
+              <div className="col-span-3 flex items-center gap-3">
+                <Avatar nama={item.nama} />
+                <p className="text-sm font-bold text-gray-900 truncate">{item.nama}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="font-bold text-gray-900">{item.kamar?.nomor_kamar || <span className="text-gray-400 font-normal text-sm italic">-</span>}</p>
+              </div>
+              <div className="col-span-3">
+                <p className="text-sm text-gray-500 truncate">{item.email}</p>
+              </div>
+              <div className="col-span-2">
+                <StatusBadge status={item.status} hasKamar={!!item.kamar} />
+              </div>
+              <div className="col-span-2 flex justify-end gap-3">
+                <button type="button" onClick={() => setEditTarget(item)} className="text-blue-600 hover:underline text-sm font-bold">Edit</button>
+                <button type="button" onClick={() => setHapusTarget(item)} className="text-red-500 hover:underline text-sm font-bold">Hapus</button>
+              </div>
             </div>
           ))}
         </div>
-      )}
-    </section>
+      </div>
+
+      {/* Modal Tambah */}
+      {modalTambah && <ModalTambahPenghuni onClose={() => setModalTambah(false)} onSaved={() => { setModalTambah(false); onRefresh(); }} />}
+
+      {/* Modal Edit */}
+      {editTarget && <ModalEditPenghuni penghuni={editTarget} onClose={() => setEditTarget(null)} onSaved={() => { setEditTarget(null); onRefresh(); }} />}
+
+      {/* Modal Hapus */}
+      <Modal open={!!hapusTarget} onClose={() => setHapusTarget(null)}>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Hapus Penghuni?</h2>
+        <p className="text-gray-500 text-sm mb-6">Yakin ingin menghapus <span className="font-bold text-gray-800">{hapusTarget?.nama}</span>?</p>
+        <div className="flex gap-3">
+          <button type="button" onClick={() => setHapusTarget(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition">Batal</button>
+          <button type="button" onClick={handleHapus} disabled={loadingHapus} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60">
+            {loadingHapus ? "Menghapus..." : "Ya, Hapus"}
+          </button>
+        </div>
+      </Modal>
+    </div>
   );
 }
 
-function ForumAdmin({ messages, messageText, onChangeMessage, onSend, onKeyDown }: { messages: any[]; messageText: string; onChangeMessage: (v: string) => void; onSend: () => void; onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void }) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+function StatusBadge({ status, hasKamar }: { status?: string; hasKamar: boolean }) {
+  if (!hasKamar) return <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold bg-gray-50 text-gray-400 border-gray-200">No Kamar</span>;
+  const isAktif = status !== "non-aktif";
   return (
-    <section className="bg-white rounded-2xl shadow-md overflow-hidden h-[600px] flex flex-col">
-      <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between shrink-0">
-        <h2 className="text-xl font-extrabold text-gray-900">Forum Komunikasi</h2>
-        <span className="rounded-full bg-green-50 text-green-600 border border-green-100 px-4 py-2 text-sm font-bold">Admin Online</span>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto bg-[#f4f7fb] px-6 py-5 space-y-4">
-        {messages.map((msg: any) => (
-          <div key={msg.id} className={`flex ${msg.role === "owner" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[76%] rounded-2xl px-4 py-3 shadow-sm ${msg.role === "owner" ? "bg-blue-600 text-white rounded-br-md" : "bg-white text-gray-900 border border-gray-100 rounded-bl-md"}`}>
-              {msg.role !== "owner" && <p className="text-xs font-bold text-blue-600 mb-1">{msg.sender}</p>}
-              {msg.role === "owner" && <p className="text-xs font-bold text-white/70 mb-1">Admin</p>}
-              <p className="text-sm leading-relaxed">{msg.isi_pesan}</p>
-              <div className={`mt-1 flex justify-end text-[11px] ${msg.role === "owner" ? "text-white/70" : "text-gray-400"}`}>{msg.tanggal_fmt}</div>
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${isAktif ? "bg-green-50 text-green-600 border-green-200" : "bg-red-50 text-red-500 border-red-200"}`}>
+      {isAktif ? "Aktif" : "Non-Aktif"}
+    </span>
+  );
+}
+
+// ─── Modal Tambah Penghuni ────────────────────────────────────────────────────
+function ModalTambahPenghuni({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [kamarList, setKamarList] = useState<any[]>([]);
+  const [form, setForm] = useState({ nama: "", email: "", username: "", password: "", id_kamar: "", tanggal_masuk: new Date().toISOString().slice(0, 10) });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    getDaftarKamar("kosong").then((res) => { if (res.success) setKamarList(res.data); });
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!form.nama || !form.email || !form.password || !form.id_kamar) { setErrorMsg("Nama, email, password, dan kamar wajib diisi."); return; }
+    setLoading(true); setErrorMsg("");
+    try {
+      const res = await tambahPenghuni({ ...form, id_kamar: Number(form.id_kamar) });
+      if (res.success) { onSaved(); } else { setErrorMsg(res.message || "Gagal menambah penghuni."); }
+    } catch { setErrorMsg("Terjadi kesalahan."); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl p-7 w-full max-w-md relative shadow-2xl animate-[modalIn_180ms_ease-out]">
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-500 flex items-center justify-center">✕</button>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">Tambah Penghuni Baru</h2>
+        <div className="space-y-3">
+          {[
+            { label: "Nama Lengkap", key: "nama", placeholder: "Nama Penghuni" },
+            { label: "email", key: "email", placeholder: "email@contoh.com" },
+            { label: "Username (opsional)", key: "username", placeholder: "" },
+            { label: "Password", key: "password", placeholder: "••••••", type: "password" },
+          ].map(({ label, key, placeholder, type }) => (
+            <div key={key}>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+              <input
+                type={type || "text"}
+                placeholder={placeholder}
+                value={(form as any)[key]}
+                onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
             </div>
+          ))}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Pilih Kamar</label>
+            <select value={form.id_kamar} onChange={(e) => setForm((f) => ({ ...f, id_kamar: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500">
+              <option value="">--Pilih kamar kosong--</option>
+              {kamarList.map((k: any) => <option key={k.id} value={k.id}>{k.nomor_kamar}</option>)}
+            </select>
           </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
-      <div className="border-t border-gray-100 bg-white p-4 shrink-0">
-        <div className="flex items-center gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-3">
-          <input value={messageText} onChange={(e) => onChangeMessage(e.target.value)} onKeyDown={onKeyDown} placeholder="Tulis pesan sebagai admin..."
-            className="flex-1 min-w-0 rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
-          <button onClick={onSend} disabled={!messageText.trim()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50 text-sm">Kirim</button>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Tanggal Masuk</label>
+            <input type="text" value={form.tanggal_masuk} onChange={(e) => setForm((f) => ({ ...f, tanggal_masuk: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500" />
+            <p className="text-xs text-gray-400 mt-1">Format: YYYY-MM-DD</p>
+          </div>
+        </div>
+        {errorMsg && <div className="mt-3 rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600">{errorMsg}</div>}
+        <div className="flex gap-3 mt-5">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition">Batal</button>
+          <button type="button" onClick={handleSubmit} disabled={loading} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60">
+            {loading ? "Menyimpan..." : "Tambah Penghuni"}
+          </button>
         </div>
       </div>
-    </section>
-  );
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <div className="bg-blue-50 border-b border-blue-100 px-7 py-3.5 flex items-center gap-2">
-      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-      <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">{title}</p>
     </div>
   );
 }
 
-function FormField({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+// ─── Modal Edit Penghuni ──────────────────────────────────────────────────────
+function ModalEditPenghuni({ penghuni, onClose, onSaved }: { penghuni: any; onClose: () => void; onSaved: () => void }) {
+  const [kamarList, setKamarList] = useState<any[]>([]);
+  const [selectedKamar, setSelectedKamar] = useState<string>(penghuni.kamar?.id ? String(penghuni.kamar.id) : "");
+  const [status, setStatus] = useState<"aktif" | "non-aktif">(penghuni.status === "non-aktif" ? "non-aktif" : "aktif");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    // Ambil semua kamar, filter di frontend: kosong + kamar penghuni saat ini
+    getDaftarKamar().then((res) => {
+      if (res.success) {
+        const filtered = res.data.filter(
+          (k: any) => k.status_kamar === "kosong" || k.id === penghuni.kamar?.id
+        );
+        setKamarList(filtered);
+      }
+    });
+  }, [penghuni.kamar?.id]);
+
+  const handleSave = async () => {
+    setLoading(true); setErrorMsg("");
+    try {
+      const payload: Record<string, unknown> = { status };
+      if (selectedKamar) payload.id_kamar = Number(selectedKamar);
+      const res = await updatePenghuni(penghuni.id, payload);
+      if (res.success) { onSaved(); } else { setErrorMsg(res.message || "Gagal menyimpan."); }
+    } catch { setErrorMsg("Terjadi kesalahan."); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl p-7 w-full max-w-md relative shadow-2xl animate-[modalIn_180ms_ease-out]">
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-500 flex items-center justify-center">✕</button>
+        <div className="flex items-center gap-3 mb-6">
+          <Avatar nama={penghuni.nama} />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Edit Penghuni</h2>
+            <p className="text-sm text-gray-400">{penghuni.email}</p>
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nomor Kamar</label>
+          <select value={selectedKamar} onChange={(e) => setSelectedKamar(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-blue-500">
+            <option value="">— Pilih Kamar —</option>
+            {kamarList.map((k: any) => (
+              <option key={k.id} value={String(k.id)}>{k.nomor_kamar}{k.id === penghuni.kamar?.id ? " (saat ini)" : " (kosong)"}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Status Penghuni</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setStatus("aktif")} className={`py-3 rounded-xl border-2 text-sm font-bold transition ${status === "aktif" ? "border-green-500 bg-green-50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>✓ Aktif</button>
+            <button type="button" onClick={() => setStatus("non-aktif")} className={`py-3 rounded-xl border-2 text-sm font-bold transition ${status === "non-aktif" ? "border-red-400 bg-red-50 text-red-500" : "border-gray-200 bg-gray-50 text-gray-400"}`}>✗ Non-Aktif</button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">{status === "aktif" ? "Aktif — sudah membayar tagihan." : "Non-Aktif — belum membayar tagihan."}</p>
+        </div>
+        {errorMsg && <div className="mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600">{errorMsg}</div>}
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition">Batal</button>
+          <button type="button" onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60">{loading ? "Menyimpan..." : "Simpan Perubahan"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TAGIHAN VIEW ─────────────────────────────────────────────────────────────
+function TagihanView() {
+  const [tagihanList, setTagihanList] = useState<any[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const fetchTagihan = () => {
+    setLoadingList(true);
+    import("../api/tagihan").then(({ getTagihan }) => {
+      getTagihan().then((res: any) => {
+        if (res.success) setTagihanList(res.data);
+      }).finally(() => setLoadingList(false));
+    }).catch(() => setLoadingList(false));
+  };
+
+  useEffect(() => { fetchTagihan(); }, []);
+
   return (
     <div>
-      <label className="block text-sm font-bold text-gray-700 mb-1.5">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full rounded-xl border border-blue-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-sm text-gray-500">Kelola</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Tagihan</h1>
+        </div>
+        <button type="button" onClick={() => setModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm">
+          + Buat Tagihan
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow overflow-hidden">
+        <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Penghuni</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Kamar</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Bulan</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Total</div>
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</div>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {loadingList && <p className="px-6 py-8 text-center text-gray-400 text-sm">Memuat...</p>}
+          {!loadingList && tagihanList.length === 0 && <p className="px-6 py-8 text-center text-gray-400 text-sm">Belum ada tagihan.</p>}
+          {tagihanList.map((t: any) => (
+            <div key={t.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-gray-50 transition">
+              <div className="col-span-3"><p className="text-sm font-bold text-gray-900">{t.penghuni?.nama || "-"}</p></div>
+              <div className="col-span-2"><p className="text-sm text-gray-700">{t.kamar?.nomor || "-"}</p></div>
+              <div className="col-span-2"><p className="text-sm text-gray-500">{t.bulan_label || t.bulan}</p></div>
+              <div className="col-span-2"><p className="text-sm font-bold text-gray-900">{t.total_format || "-"}</p></div>
+              <div className="col-span-3">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${t.status_tagihan === "Lunas" ? "bg-green-50 text-green-600 border-green-200" : "bg-red-50 text-red-500 border-red-200"}`}>
+                  {t.status_tagihan}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {modalOpen && <ModalBuatTagihan onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); fetchTagihan(); }} />}
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function ModalBuatTagihan({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [mode, setMode] = useState<"semua" | "manual">("semua");
+  const [bulan, setBulan] = useState(new Date().toISOString().slice(0, 7));
+  const [penghuniList, setPenghuniList] = useState<any[]>([]);
+  const [selectedPenghuni, setSelectedPenghuni] = useState("");
+  const [jumlah, setJumlah] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [msgType, setMsgType] = useState<"success" | "error">("success");
+
+  useEffect(() => {
+    if (mode === "manual") {
+      getDaftarPenghuni().then((res) => { if (res.success) setPenghuniList(res.data); });
+    }
+  }, [mode]);
+
+  const handleSubmit = async () => {
+    setLoading(true); setMsg("");
+    try {
+      if (mode === "semua") {
+        const res = await generateTagihanBulanan(bulan + "-01");
+        if (res.success) { setMsgType("success"); setMsg("Tagihan berhasil dibuat untuk semua penghuni!"); setTimeout(onSaved, 1200); }
+        else { setMsgType("error"); setMsg(res.message || "Gagal membuat tagihan."); }
+      } else {
+        if (!selectedPenghuni || !jumlah) { setMsgType("error"); setMsg("Penghuni dan jumlah wajib diisi."); setLoading(false); return; }
+        const penghuni = penghuniList.find((p: any) => String(p.id) === selectedPenghuni);
+        if (!penghuni?.kamar?.id_sewa) { setMsgType("error"); setMsg("Penghuni belum punya kamar aktif."); setLoading(false); return; }
+        const { buatTagihan } = await import("../api/tagihan");
+        const res = await buatTagihan({ id_sewa: penghuni.kamar.id_sewa, bulan: bulan + "-01", jumlah: Number(jumlah) });
+        if (res.success) { setMsgType("success"); setMsg("Tagihan berhasil dibuat!"); setTimeout(onSaved, 1200); }
+        else { setMsgType("error"); setMsg(res.message || "Gagal membuat tagihan."); }
+      }
+    } catch { setMsgType("error"); setMsg("Terjadi kesalahan."); }
+    setLoading(false);
+  };
+
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-      <span className="text-sm text-gray-400">{label}</span>
-      <span className="text-sm font-bold text-gray-800">{value}</span>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl p-7 w-full max-w-md relative shadow-2xl animate-[modalIn_180ms_ease-out]">
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-500 flex items-center justify-center">✕</button>
+        <h2 className="text-xl font-bold text-gray-900 mb-5">Buat Tagihan</h2>
+
+        <div className="mb-4">
+          <label className="block text-xs font-semibold text-gray-500 mb-2">Mode</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setMode("semua")} className={`py-2.5 rounded-xl border-2 text-sm font-bold transition ${mode === "semua" ? "border-blue-500 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700"}`}>Semua Penghuni</button>
+            <button type="button" onClick={() => setMode("manual")} className={`py-2.5 rounded-xl border-2 text-sm font-bold transition ${mode === "manual" ? "border-blue-500 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700"}`}>Manual</button>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-semibold text-gray-500 mb-2">Bulan</label>
+          <input type="month" value={bulan} onChange={(e) => setBulan(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500" />
+        </div>
+
+        {mode === "semua" && (
+          <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700 font-semibold">
+            Tagihan dibuat otomatis sesuai harga kamar masing masing penghuni aktif
+          </div>
+        )}
+
+        {mode === "manual" && (
+          <>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-500 mb-2">Penghuni</label>
+              <select value={selectedPenghuni} onChange={(e) => setSelectedPenghuni(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500">
+                <option value="">-- Pilih Penghuni --</option>
+                {penghuniList.filter((p: any) => p.kamar).map((p: any) => (
+                  <option key={p.id} value={String(p.id)}>{p.nama} - {p.kamar?.nomor_kamar}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-500 mb-2">Jumlah (Rp)</label>
+              <input type="number" value={jumlah} onChange={(e) => setJumlah(e.target.value)} placeholder="0" className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500" />
+            </div>
+          </>
+        )}
+
+        {msg && <div className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-medium ${msgType === "success" ? "bg-green-50 text-green-600 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{msg}</div>}
+
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition">Batal</button>
+          <button type="button" onClick={handleSubmit} disabled={loading} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60">{loading ? "Memproses..." : "Buat Tagihan"}</button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function MsgBanner({ success, error }: { success: string; error: string }) {
-  if (success) return <div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm font-semibold px-4 py-3 rounded-xl">{success}</div>;
-  if (error) return <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm font-semibold px-4 py-3 rounded-xl">{error}</div>;
-  return null;
+// ─── PEMBAYARAN VIEW ──────────────────────────────────────────────────────────
+function PembayaranView() {
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionMsg, setActionMsg] = useState("");
+
+  useEffect(() => {
+    getPembayaranMenunggu().then((res) => { if (res.success) setList(res.data); }).finally(() => setLoading(false));
+  }, []);
+
+  const handleValidasi = async (id: number, status: "Valid" | "Ditolak") => {
+    try {
+      const res = await validasiPembayaran(id, status);
+      if (res.success) {
+        setList((prev) => prev.filter((p) => p.id !== id));
+        setActionMsg(`Pembayaran berhasil di-${status === "Valid" ? "validasi" : "tolak"}.`);
+      }
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div className="mb-5">
+        <p className="text-sm text-gray-500">Kelola</p>
+        <h1 className="text-3xl font-extrabold text-gray-900">Validasi Pembayaran</h1>
+      </div>
+      {actionMsg && <div className="mb-4 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 font-medium">{actionMsg}</div>}
+      <div className="bg-white rounded-2xl shadow overflow-hidden">
+        <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-100 px-6 py-3">
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Penghuni</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Kamar</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Jumlah</div>
+          <div className="col-span-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Tanggal</div>
+          <div className="col-span-3 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Aksi</div>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {loading && <p className="px-6 py-8 text-center text-gray-400 text-sm">Memuat...</p>}
+          {!loading && list.length === 0 && <p className="px-6 py-8 text-center text-gray-400 text-sm">Tidak ada pembayaran yang menunggu validasi.</p>}
+          {list.map((item: any) => (
+            <div key={item.id} className="grid grid-cols-12 items-center px-6 py-4 hover:bg-gray-50 transition">
+              <div className="col-span-3"><p className="font-bold text-gray-900 text-sm">{item.penghuni?.nama || "-"}</p></div>
+              <div className="col-span-2"><p className="text-sm text-gray-700">{item.kamar?.nomor_kamar || "-"}</p></div>
+              <div className="col-span-2"><p className="text-sm font-bold text-gray-900">{formatRupiah(item.jumlah_bayar)}</p></div>
+              <div className="col-span-2"><p className="text-sm text-gray-500">{item.tanggal_pembayaran?.slice(0, 10) || "-"}</p></div>
+              <div className="col-span-3 flex justify-end gap-2">
+                <button type="button" onClick={() => handleValidasi(item.id, "Valid")} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition">Valid</button>
+                <button type="button" onClick={() => handleValidasi(item.id, "Ditolak")} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition">Tolak</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
+// ─── PENGUMUMAN VIEW ──────────────────────────────────────────────────────────
+function PengumumanView() {
+  const [pesan, setPesan] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const handleKirim = async () => {
+    if (!pesan.trim()) return;
+    setLoading(true); setMsg("");
+    try {
+      const res = await kirimPengumuman(pesan.trim());
+      if (res.success) { setPesan(""); setMsg("Pengumuman berhasil dikirim!"); }
+      else { setMsg(res.message || "Gagal mengirim."); }
+    } catch { setMsg("Terjadi kesalahan."); }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-sm text-gray-500">Broadcast</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Pengumuman</h1>
+        </div>
+        <button type="button" onClick={handleKirim} disabled={loading || !pesan.trim()} className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm disabled:opacity-60">
+          + Kirim Pengumuman
+        </button>
+      </div>
+      <div className="bg-white rounded-2xl shadow p-8">
+        <p className="font-bold text-gray-900 text-lg mb-1">Kirim pengumuman ke semua penghuni sekaligus</p>
+        <p className="text-sm text-gray-400 mb-5">Pengumuman akan masuk ke notifikasi semua penghuni aktif</p>
+        <textarea
+          value={pesan}
+          onChange={(e) => setPesan(e.target.value)}
+          placeholder="Tulis isi pengumuman di sini..."
+          rows={5}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 resize-none"
+        />
+        {msg && <div className={`mt-3 rounded-xl px-4 py-2.5 text-sm font-medium ${msg.includes("berhasil") ? "bg-green-50 text-green-600 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{msg}</div>}
+        <button type="button" onClick={handleKirim} disabled={loading || !pesan.trim()} className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-3 rounded-xl transition disabled:opacity-60">
+          {loading ? "Mengirim..." : "Tulis Pengumuman"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── FORUM VIEW ───────────────────────────────────────────────────────────────
+function ForumView() {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [messageText, setMessageText] = useState("");
+
+  useEffect(() => {
+    getForum().then((res) => { if (res.success) setMessages(res.data); });
+  }, []);
+
+  const handleSend = async () => {
+    const trimmed = messageText.trim();
+    if (!trimmed) return;
+    try {
+      const res = await kirimPesan(trimmed);
+      if (res.success) {
+        setMessages((prev) => [...prev, { id: res.data.id, sender: "Admin", role: "owner", isi_pesan: trimmed, tanggal_fmt: getCurrentTime() }]);
+      }
+    } catch {}
+    setMessageText("");
+  };
+
+  return (
+    <div>
+      <div className="mb-5">
+        <p className="text-sm text-gray-500">Komunikasi</p>
+        <h1 className="text-3xl font-extrabold text-gray-900">Forum Penghuni</h1>
+      </div>
+      <section className="bg-white rounded-2xl shadow overflow-hidden h-[600px] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <p className="font-bold text-gray-900">Forum Komunikasi</p>
+          <span className="rounded-full bg-green-50 text-green-600 border border-green-100 px-3 py-1 text-xs font-bold">Admin Online</span>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto bg-[#f4f7fb] px-6 py-5 space-y-4">
+          <div className="mx-auto w-fit rounded-full bg-white border border-gray-100 px-4 py-1.5 text-xs font-bold text-gray-400">Forum Penghuni</div>
+          {messages.map((msg: any) => (
+            <div key={msg.id} className={`flex ${msg.role === "owner" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[76%] rounded-2xl px-4 py-3 shadow-sm ${msg.role === "owner" ? "bg-blue-600 text-white rounded-br-md" : "bg-white text-gray-900 border border-gray-100 rounded-bl-md"}`}>
+                {msg.role !== "owner" && <p className="text-xs font-bold text-blue-600 mb-1">{msg.sender}</p>}
+                {msg.role === "owner" && <p className="text-xs font-bold text-white/70 mb-1">Admin</p>}
+                <p className="text-sm leading-relaxed">{msg.isi_pesan}</p>
+                <div className={`mt-1 flex justify-end text-[11px] ${msg.role === "owner" ? "text-white/70" : "text-gray-400"}`}>{msg.tanggal_fmt}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-gray-100 bg-white p-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-3">
+            <input value={messageText} onChange={(e) => setMessageText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSend(); } }} placeholder="Tulis pesan sebagai admin..." className="flex-1 min-w-0 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-blue-500" />
+            <button type="button" onClick={handleSend} disabled={!messageText.trim()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl transition disabled:opacity-50 text-sm">Kirim</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
 function Modal({ open, onClose, children }: ModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl p-7 w-full max-w-md relative shadow-2xl animate-[modalIn_180ms_ease-out] max-h-[90vh] overflow-y-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-500 flex items-center justify-center transition">✕</button>
+      <div className="bg-white rounded-2xl p-7 w-full max-w-sm relative shadow-2xl animate-[modalIn_180ms_ease-out]">
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold text-gray-500 flex items-center justify-center">✕</button>
         {children}
       </div>
     </div>
   );
-}
-
-function Spinner() {
-  return <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />;
 }
