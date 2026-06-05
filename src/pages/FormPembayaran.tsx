@@ -190,23 +190,35 @@ export default function FormPembayaran() {
                 <SectionHeader title="Atau Upload Bukti Transfer Manual" />
                 <div className="p-7 space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Field label="Pilih Bank">
+                    <Field label="Metode Pembayaran">
                       <select
                         value={bank}
                         onChange={(e) => setBank(e.target.value)}
                         className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-base font-semibold text-gray-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                       >
-                        {["BCA", "BRI", "BNI", "Mandiri", "BSI"].map((item) => (
-                          <option key={item} value={item}>{item}</option>
-                        ))}
+                        <optgroup label="Transfer Bank">
+                          {["BCA", "BRI", "BNI", "Mandiri", "BSI"].map((item) => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="E-Wallet">
+                          {["GoPay", "ShopeePay", "OVO", "Dana"].map((item) => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Lainnya">
+                          {["QRIS", "Indomaret", "Alfamart"].map((item) => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </optgroup>
                       </select>
                     </Field>
 
-                    <Field label="No Rekening">
+                    <Field label="No Rekening / No Akun">
                       <input
                         value={noRekening}
                         onChange={(e) => setNoRekening(e.target.value)}
-                        placeholder="Nomor rekening pengirim"
+                        placeholder="No rekening / no akun e-wallet"
                         className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-base font-semibold text-gray-900 outline-none transition placeholder:text-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                       />
                     </Field>
